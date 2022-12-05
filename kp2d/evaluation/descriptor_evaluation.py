@@ -7,6 +7,7 @@ from os import path as osp
 
 import cv2
 import numpy as np
+from scipy.spatial.distance import cdist
 
 from kp2d.utils.keypoints import warp_keypoints
 
@@ -76,6 +77,59 @@ def keep_shared_points(keypoints, descriptors, H, shape, keep_k_points=1000):
     selected_keypoints, selected_descriptors = keep_true_keypoints(keypoints, descriptors, H, shape)
     selected_keypoints, selected_descriptors = select_k_best(selected_keypoints, selected_descriptors, keep_k_points)
     return selected_keypoints, selected_descriptors
+
+def get_descriptor_distance(desc1, desc2, alpha=0.5):
+    # split the descriptors into two parts
+    part1 = desc1[:32]
+    part2 = desc1[32:]
+    part3 = desc2[:32]
+    part4 = desc2[32:]
+
+    # calculate the distance between the corresponding parts
+    dist1 = np.sum((part1 - part3)**2)
+    dist2 = np.sum((part2 - part4)**2)
+
+    # combine the distances using the hyperparameter alpha
+    dist = alpha * dist1 + (1 - alpha) * dist2
+
+    # return the distance between the descriptors
+    return dist
+
+
+def bf_matcher(des1, des2, alpha=0.5, cross_check=False):
+    # initialize the list of matches
+    matches = []
+
+    # compute the distances between the descriptors
+    dists = cdist(des1, des2, lambda x, y: get_descriptor_distance(x, y, alpha=alpha))
+
+    # loop over the descriptors in des1
+    for i in range(des1.shape[0]):
+        # get the indices of the best and second-best matches
+        best_match = np.argmin(dists[i])
+        second_best = np.partition(dists[i], 1)[1]
+
+        # if cross_check is enabled, check if this match is reciprocal
+        if cross_check:
+            r_best_match = np.argmin(dists[best_match])
+            if r_best_match == i:
+                # if the match is reciprocal, store it
+                matches.append((i, best_match, dists[i, best_match]))
+        else:
+            # if the match is not reciprocal, check if it is the best
+            if dists[i, best_match] < dists[i, second_best]:
+                # if the match is the best, store it
+                matches.append((i, best_match, dists[i, best_match]))
+
+    # return the list of matches
+    return matches
+
+# # compute the descriptors for the two images
+# kp1, des1 = orb.detectAndCompute(img1, None)
+# kp2, des2 = orb.detectAndCompute(img2, None)
+
+# # match the descriptors using the BF matcher
+# matches = bf_matcher(des1, des2, alpha=0.7, cross_check=True)
 
 
 def compute_matching_score(data, keep_k_points=1000):
