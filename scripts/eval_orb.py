@@ -16,45 +16,33 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 from kp2d.datasets.patches_dataset import PatchesDataset
-from kp2d.evaluation.evaluate import evaluate_keypoint_net
-from kp2d.networks.keypoint_net import KeypointNet
-from kp2d.networks.keypoint_resnet import KeypointResnet
+from kp2d.evaluation.evaluate import evaluate_orb
 
 
 def main():
+
+    #! Parse Arguments
     parser = argparse.ArgumentParser(
-        description='Script for KeyPointNet testing',
+        description='Script for ORB testing',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--pretrained_model", type=str, help="pretrained model path")
-    parser.add_argument("--input_dir", required=True, type=str, help="Folder containing input images")
-
+    parser.add_argument("--input_dir", type=str, default="/mnt/SSD0/rashik/datasets/hpatches", help="Path to hpatches dataset")
+    parser.add_argument("--nfeatures", type=int, default=1000, help="Number of features")
+    parser.add_argument("--fast_threshold", type=int, default=5, help="Fast Threshold")
     args = parser.parse_args()
-    checkpoint = torch.load(args.pretrained_model)
-    model_args = checkpoint['config']['model']['params']
 
-    # Check model type
-    if 'keypoint_net_type' in checkpoint['config']['model']['params']:
-        net_type = checkpoint['config']['model']['params']
-    else:
-        net_type = KeypointNet # default when no type is specified
+    print("Using following args:")
+    print(args)
+    input("Press any key to continue ...")
 
-    # Create and load keypoint net
-    if net_type is KeypointNet:
-        keypoint_net = KeypointNet(use_color=model_args['use_color'],
-                                do_upsample=model_args['do_upsample'],
-                                do_cross=model_args['do_cross'])
-    else:
-        keypoint_net = KeypointResnet()
+    #! Define ORB detector
+    orb =  cv2.ORB_create()
+    # orb =  cv2.ORB_create(nfeatures=args.nfeatures, fastThreshold=args.fast_threshold)
 
-    keypoint_net.load_state_dict(checkpoint['state_dict'])
-    keypoint_net = keypoint_net.cuda()
-    keypoint_net.eval()
-    print('Loaded KeypointNet from {}'.format(args.pretrained_model))
-    print('KeypointNet params {}'.format(model_args))
-
-    eval_params = [{'res': (320, 240), 'top_k': 300, }] if net_type is KeypointNet else [{'res': (320, 256), 'top_k': 300, }] # KeypointResnet needs (320,256)
+    #! Versions of Dataset to use
+    eval_params = [{'res': (320, 240), 'top_k': 300, }]
     eval_params += [{'res': (640, 480), 'top_k': 1000, }]
 
+    #! Foe each version of dataset:
     for params in eval_params:
         hp_dataset = PatchesDataset(root_dir=args.input_dir, use_color=True,
                                     output_shape=params['res'], type='a')
@@ -66,15 +54,15 @@ def main():
                                  worker_init_fn=None,
                                  sampler=None)
 
-        print(f"Number of datapoints: {hp_dataset.__len__()}")
 
         print(colored('Evaluating for {} -- top_k {}'.format(params['res'], params['top_k']),'green'))
-        rep, loc, c1, c3, c5, mscore = evaluate_keypoint_net(
+        print(f"Available number of datapoints: {hp_dataset.__len__()}")
+
+        rep, loc, c1, c3, c5, mscore = evaluate_orb(
             data_loader,
-            keypoint_net,
+            orb,
             output_shape=params['res'],
-            top_k=params['top_k'],
-            use_color=True)
+            top_k=params['top_k'])
 
         print('Repeatability {0:.3f}'.format(rep))
         print('Localization Error {0:.3f}'.format(loc))
