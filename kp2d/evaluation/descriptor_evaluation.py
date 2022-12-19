@@ -78,6 +78,7 @@ def keep_shared_points(keypoints, descriptors, H, shape, keep_k_points=1000):
     selected_keypoints, selected_descriptors = select_k_best(selected_keypoints, selected_descriptors, keep_k_points)
     return selected_keypoints, selected_descriptors
 
+
 def get_descriptor_distance(desc1, desc2, alpha=0.5):
     # split the descriptors into two parts
     part1 = desc1[:32]
@@ -116,7 +117,7 @@ def bf_matcher(des1, des2, alpha=0.5, cross_check=False):
                 # if the match is reciprocal, store it
                 matches.append((i, best_match, dists[i, best_match]))
         else:
-            # if the match is not reciprocal, check if it is the best
+            # if the match is not reciprocal,. check if it is the best
             if dists[i, best_match] < dists[i, second_best]:
                 # if the match is the best, store it
                 matches.append((i, best_match, dists[i, best_match]))
@@ -179,7 +180,9 @@ def compute_matching_score(data, keep_k_points=1000):
     # All the matched pairs need to be evaluated without any selection.
     bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
 
+
     matches = bf.match(desc, warped_desc)
+    # matches = bf_matcher(desc, warped_desc)
     matches_idx = np.array([m.queryIdx for m in matches])
     m_keypoints = keypoints[matches_idx, :]
     matches_idx = np.array([m.trainIdx for m in matches])
@@ -194,6 +197,7 @@ def compute_matching_score(data, keep_k_points=1000):
     score1 = count1 / np.maximum(np.sum(vis_warped), 1.0)
 
     matches = bf.match(warped_desc, desc)
+    # matches = bf_matcher(warped_desc, desc)
     matches_idx = np.array([m.queryIdx for m in matches])
     m_warped_keypoints = warped_keypoints[matches_idx, :]
     matches_idx = np.array([m.trainIdx for m in matches])
@@ -210,6 +214,7 @@ def compute_matching_score(data, keep_k_points=1000):
     ms = (score1 + score2) / 2
 
     return ms
+
 
 def compute_homography(data, keep_k_points=1000):
     """
@@ -260,6 +265,7 @@ def compute_homography(data, keep_k_points=1000):
 
     bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
     matches = bf.match(desc, warped_desc)
+    # matches = bf_matcher(desc, warped_desc, cross_check=True)
     matches_idx = np.array([m.queryIdx for m in matches])
     m_keypoints = keypoints[matches_idx, :]
     matches_idx = np.array([m.trainIdx for m in matches])
