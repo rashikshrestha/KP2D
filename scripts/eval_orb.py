@@ -26,8 +26,8 @@ def main():
         description='Script for ORB testing',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--input_dir", type=str, default="/mnt/SSD0/rashik/datasets/hpatches", help="Path to hpatches dataset")
-    parser.add_argument("--nfeatures", type=int, default=1000, help="Number of features")
-    parser.add_argument("--fast_threshold", type=int, default=5, help="Fast Threshold")
+    parser.add_argument("--nfeatures", type=int, default=500, help="Number of features")
+    parser.add_argument("--fast_threshold", type=int, default=20, help="Fast Threshold")
     args = parser.parse_args()
 
     print("Using following args:")
@@ -35,14 +35,13 @@ def main():
     input("Press any key to continue ...")
 
     #! Define ORB detector
-    orb =  cv2.ORB_create()
-    # orb =  cv2.ORB_create(nfeatures=args.nfeatures, fastThreshold=args.fast_threshold)
+    orb =  cv2.ORB_create(nfeatures=args.nfeatures, fastThreshold=args.fast_threshold)
 
     #! Versions of Dataset to use
     eval_params = [{'res': (320, 240), 'top_k': 300, }]
     eval_params += [{'res': (640, 480), 'top_k': 1000, }]
 
-    #! Foe each version of dataset:
+    #! For each version of dataset:
     for params in eval_params:
         hp_dataset = PatchesDataset(root_dir=args.input_dir, use_color=True,
                                     output_shape=params['res'], type='a')
