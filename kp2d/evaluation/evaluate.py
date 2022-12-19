@@ -13,6 +13,9 @@ from kp2d.evaluation.descriptor_evaluation import (compute_homography,
 from kp2d.evaluation.detector_evaluation import compute_repeatability
 from kp2d.utils.image import to_color_normalized, to_gray_normalized
 
+#! Stuffs from vfm
+from vfm.utils.descriptor_loss import sample_descriptors
+
 
 def evaluate_keypoint_net(data_loader, keypoint_net, output_shape=(320, 240), top_k=300, use_color=True):
     """Keypoint net evaluation script. 
@@ -100,6 +103,7 @@ def evaluate_keypoint_net(data_loader, keypoint_net, output_shape=(320, 240), to
     return np.mean(repeatability), np.mean(localization_err), \
            np.mean(correctness1), np.mean(correctness3), np.mean(correctness5), np.mean(MScore)
 
+
 def evaluate_orb(data_loader, orb, output_shape=(320, 240), top_k=300):
     """ORB evaluation script. 
 
@@ -117,7 +121,8 @@ def evaluate_orb(data_loader, orb, output_shape=(320, 240), top_k=300):
     def get_KSD(image):
         #! Get image in numpy
         image = image[0] # Remove SINGLE batch dimension
-        image = image.permute((1,2,0))*255.
+        # Swap the dimenstion to be compatable with opencv and change the range from 0-1 to 0-255
+        image = image.permute((1,2,0))*255. 
         img_np = image.cpu().numpy()
         img_np = img_np.astype(np.uint8)
 
@@ -179,6 +184,98 @@ def evaluate_orb(data_loader, orb, output_shape=(320, 240), top_k=300):
         #! Compute matching score
         mscore = compute_matching_score(data, keep_k_points=top_k)
         MScore.append(mscore)
+
+    return np.mean(repeatability), np.mean(localization_err), \
+           np.mean(correctness1), np.mean(correctness3), np.mean(correctness5), np.mean(MScore)
+
+
+def evaluate_fastfeature(data_loader, orb, fastfeature, output_shape=(320, 240), top_k=300):
+
+    transform_to_gray = transforms.Grayscale()
+
+    def get_KSD(image):
+        #! Get image in numpy
+        image_ = image[0] # Remove SINGLE batch dimension
+        # Swap the dimenstion to be compatable with opencv and change the range from 0-1 to 0-255
+        image_ = image_.permute((1,2,0))*255. 
+        img_np = image_.cpu().numpy()
+        img_np = img_np.astype(np.uint8)
+
+        #! Detect kpts
+        keypoints, orbdesc = orb.detectAndCompute(img_np, None)
+        kpts = []
+        scores = []
+        for k in keypoints:
+            kpts.append([k.pt[0], k.pt[1]])
+            scores.append(k.response)
+        kpts = np.array(kpts)
+        scores = np.array(scores)
+
+        #! Normalize the scores
+        scores_norm = np.linalg.norm(scores)
+        scores /= scores_norm
+        kpts_scores = np.hstack((kpts, scores.reshape(-1,1)))
+
+        #! Use model to get dense_desc 
+        img = image.cuda()
+        img = transform_to_gray(img)
+        dense_desc = fastfeature(img)
+
+        #! Get Batchsize, img height, img width
+        B, _, H, W = image.shape
+
+        #! Sample from dense descriptors
+        kpts_tensor = torch.from_numpy(kpts)
+        sampled_desc = sample_descriptors(kpts_tensor, dense_desc[0], H, W)
+        sampled_desc_np = sampled_desc.detach().cpu().numpy()
+
+        # print(sampled_desc_np.shape)
+
+        #! concat with orb desc 
+        desc = np.concatenate((orbdesc, sampled_desc_np), 1)
+
+        return kpts_scores, desc
+
+
+    #! Change the fastfeature model to evaluation mode
+    fastfeature.eval()
+
+    #! Accumulatiors
+    conf_threshold = 0.0
+    localization_err, repeatability = [], []
+    correctness1, correctness3, correctness5, MScore = [], [], [], []
+
+    with torch.no_grad():
+        #! For each data point:
+        for i, sample in tqdm(enumerate(data_loader), desc="evaluate_fastfeature"):
+            score_1, desc1 = get_KSD(sample['image'])
+            score_2, desc2 = get_KSD(sample['warped_image'])
+            # print(desc1)
+
+            #! Prepare data for eval
+            data = {'image': sample['image'].numpy().squeeze(),
+                    'image_shape' : output_shape,
+                    'warped_image': sample['warped_image'].numpy().squeeze(),
+                    'homography': sample['homography'].squeeze().numpy(),
+                    'prob': score_1, 
+                    'warped_prob': score_2,
+                    'desc': desc1,
+                    'warped_desc': desc2}
+
+            #! Compute repeatabilty and localization error
+            _, _, rep, loc_err = compute_repeatability(data, keep_k_points=top_k, distance_thresh=3)
+            repeatability.append(rep)
+            localization_err.append(loc_err)
+
+            #! Compute correctness
+            c1, c2, c3 = compute_homography(data, keep_k_points=top_k)
+            correctness1.append(c1)
+            correctness3.append(c2)
+            correctness5.append(c3)
+
+            #! Compute matching score
+            mscore = compute_matching_score(data, keep_k_points=top_k)
+            MScore.append(mscore)
 
     return np.mean(repeatability), np.mean(localization_err), \
            np.mean(correctness1), np.mean(correctness3), np.mean(correctness5), np.mean(MScore)
