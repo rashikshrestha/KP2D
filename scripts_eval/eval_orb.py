@@ -57,7 +57,7 @@ def main():
         print(colored('Evaluating for {} -- top_k {}'.format(params['res'], params['top_k']),'green'))
         print(f"Available number of datapoints: {hp_dataset.__len__()}")
 
-        rep, loc, c1, c3, c5, mscore = evaluate_orb(
+        rep, loc, c1, c3, c5, mscore, dur = evaluate_orb(
             data_loader,
             orb,
             output_shape=params['res'],
@@ -69,6 +69,7 @@ def main():
         print('Correctness d3 {:.3f}'.format(c3))
         print('Correctness d5 {:.3f}'.format(c5))
         print('MScore {:.3f}'.format(mscore))
+        print('Duration {:.3f}'.format(dur))
 
 
 if __name__ == '__main__':

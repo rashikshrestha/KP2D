@@ -7,6 +7,7 @@ import pickle
 import random
 import subprocess
 
+
 import cv2
 import numpy as np
 import torch
@@ -26,6 +27,7 @@ def main():
         description='Script for KeyPointNet testing',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--pretrained_model", type=str, help="pretrained model path")
+    parser.add_argument("--device", type=str, default='cpu', help="CPU or CUDA")
     parser.add_argument("--input_dir", required=True, type=str, help="Folder containing input images")
 
     args = parser.parse_args()
@@ -47,7 +49,7 @@ def main():
         keypoint_net = KeypointResnet()
 
     keypoint_net.load_state_dict(checkpoint['state_dict'])
-    keypoint_net = keypoint_net.cuda()
+    keypoint_net = keypoint_net.to(args.device)
     keypoint_net.eval()
     print('Loaded KeypointNet from {}'.format(args.pretrained_model))
     print('KeypointNet params {}'.format(model_args))
@@ -69,12 +71,13 @@ def main():
         print(f"Number of datapoints: {hp_dataset.__len__()}")
 
         print(colored('Evaluating for {} -- top_k {}'.format(params['res'], params['top_k']),'green'))
-        rep, loc, c1, c3, c5, mscore = evaluate_keypoint_net(
+        rep, loc, c1, c3, c5, mscore, dur = evaluate_keypoint_net(
             data_loader,
             keypoint_net,
             output_shape=params['res'],
             top_k=params['top_k'],
-            use_color=True)
+            use_color=True,
+            device=args.device)
 
         print('Repeatability {0:.3f}'.format(rep))
         print('Localization Error {0:.3f}'.format(loc))
@@ -82,6 +85,7 @@ def main():
         print('Correctness d3 {:.3f}'.format(c3))
         print('Correctness d5 {:.3f}'.format(c5))
         print('MScore {:.3f}'.format(mscore))
+        print('Duration {:.3f}'.format(dur))
 
 
 if __name__ == '__main__':
