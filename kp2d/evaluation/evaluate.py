@@ -5,6 +5,8 @@ import torch
 import torchvision.transforms as transforms
 from tqdm import tqdm
 import sys
+from timeit import default_timer as timer
+
 np.set_printoptions(suppress=True, threshold=sys.maxsize)
 
 
@@ -17,7 +19,7 @@ from kp2d.utils.image import to_color_normalized, to_gray_normalized
 from vfm.utils.descriptor_loss import sample_descriptors
 
 
-def evaluate_keypoint_net(data_loader, keypoint_net, output_shape=(320, 240), top_k=300, use_color=True):
+def evaluate_keypoint_net(data_loader, keypoint_net, output_shape=(320, 240), top_k=300, use_color=True, device='cpu'):
     """Keypoint net evaluation script. 
 
     Parameters
@@ -39,15 +41,19 @@ def evaluate_keypoint_net(data_loader, keypoint_net, output_shape=(320, 240), to
     conf_threshold = 0.0
     localization_err, repeatability = [], []
     correctness1, correctness3, correctness5, MScore = [], [], [], []
+    duration = []
 
     with torch.no_grad():
         for i, sample in tqdm(enumerate(data_loader), desc="evaluate_keypoint_net"):
+            #! -----------------------------------------------------------------------------
+            start = timer()
+
             if use_color:
-                image = to_color_normalized(sample['image'].cuda())
-                warped_image = to_color_normalized(sample['warped_image'].cuda())
+                image = to_color_normalized(sample['image'].to(device))
+                warped_image = to_color_normalized(sample['warped_image'].to(device))
             else:
-                image = to_gray_normalized(sample['image'].cuda())
-                warped_image = to_gray_normalized(sample['warped_image'].cuda())
+                image = to_gray_normalized(sample['image'].to(device))
+                warped_image = to_gray_normalized(sample['warped_image'].to(device))
 
             score_1, coord_1, desc1 = keypoint_net(image)
             score_2, coord_2, desc2 = keypoint_net(warped_image)
@@ -76,14 +82,18 @@ def evaluate_keypoint_net(data_loader, keypoint_net, output_shape=(320, 240), to
                     'desc': desc1,
                     'warped_desc': desc2}
 
-            print(data['prob'].shape)
-            print(data['prob'].dtype)
-            print(data['desc'].shape)
-            print(data['desc'].dtype)
+            end = timer()
+            duration.append(end-start)
+            #! -----------------------------------------------------------------------------
 
-            print(data['prob'][:10])
-            print(data['desc'][:10][:10])
-            input()
+            # print(data['prob'].shape)
+            # print(data['prob'].dtype)
+            # print(data['desc'].shape)
+            # print(data['desc'].dtype)
+
+            # print(data['prob'][:10])
+            # print(data['desc'][:10][:10])
+            # input()
             
             # Compute repeatabilty and localization error
             _, _, rep, loc_err = compute_repeatability(data, keep_k_points=top_k, distance_thresh=3)
@@ -101,7 +111,7 @@ def evaluate_keypoint_net(data_loader, keypoint_net, output_shape=(320, 240), to
             MScore.append(mscore)
 
     return np.mean(repeatability), np.mean(localization_err), \
-           np.mean(correctness1), np.mean(correctness3), np.mean(correctness5), np.mean(MScore)
+           np.mean(correctness1), np.mean(correctness3), np.mean(correctness5), np.mean(MScore), np.mean(duration)
 
 
 def evaluate_orb(data_loader, orb, output_shape=(320, 240), top_k=300):
@@ -148,9 +158,13 @@ def evaluate_orb(data_loader, orb, output_shape=(320, 240), top_k=300):
     conf_threshold = 0.0
     localization_err, repeatability = [], []
     correctness1, correctness3, correctness5, MScore = [], [], [], []
+    dur = []
 
     #! For each data point:
     for i, sample in tqdm(enumerate(data_loader), desc="evaluate_ORB"):
+        #! -----------------------------------------------------------------------------
+        start = timer()
+
         score_1, desc1 = get_KSD(sample['image'])
         score_2, desc2 = get_KSD(sample['warped_image'])
 
@@ -164,11 +178,9 @@ def evaluate_orb(data_loader, orb, output_shape=(320, 240), top_k=300):
                 'desc': desc1,
                 'warped_desc': desc2}
 
-        # print(score_1.shape)
-        # print(desc1.shape)
-        # print(score_1[:10])
-        # print(desc1[:10][:4])
-        # input()
+        end = timer()
+        dur.append(end-start)
+        #! -----------------------------------------------------------------------------
 
         #! Compute repeatabilty and localization error
         _, _, rep, loc_err = compute_repeatability(data, keep_k_points=top_k, distance_thresh=3)
@@ -186,7 +198,8 @@ def evaluate_orb(data_loader, orb, output_shape=(320, 240), top_k=300):
         MScore.append(mscore)
 
     return np.mean(repeatability), np.mean(localization_err), \
-           np.mean(correctness1), np.mean(correctness3), np.mean(correctness5), np.mean(MScore)
+           np.mean(correctness1), np.mean(correctness3), np.mean(correctness5), np.mean(MScore), \
+           np.mean(dur)
 
 
 def evaluate_fastfeature(data_loader, orb, fastfeature, output_shape=(320, 240), top_k=300):
