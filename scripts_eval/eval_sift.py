@@ -16,21 +16,17 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 from kp2d.datasets.patches_dataset import PatchesDataset
-from kp2d.evaluation.evaluate import evaluate_fastfeature
+from kp2d.evaluation.evaluate import evaluate_orb
 
-#! Stuffs from vfm
-from vfm.fastfeature.fastfeature_net_big import FastFeatureNetBig
 
 def main():
 
     #! Parse Arguments
     parser = argparse.ArgumentParser(
-        description='Script for FastFeature testing',
+        description='Script for ORB testing',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--input_dir", type=str, default="/mnt/SSD0/rashik/datasets/hpatches", help="Path to hpatches dataset")
-    parser.add_argument("--pretrained_model", default="/home/rashik/workspace/simplicity/KP2D/data/fastfeature/big.pth", type=str, help="pretrained model path")
     parser.add_argument("--nfeatures", type=int, default=500, help="Number of features")
-    parser.add_argument("--fast_threshold", type=int, default=20, help="Fast Threshold")
     args = parser.parse_args()
 
     print("Using following args:")
@@ -38,13 +34,7 @@ def main():
     input("Press any key to continue ...")
 
     #! Define ORB detector
-    orb =  cv2.ORB_create(nfeatures=args.nfeatures, fastThreshold=args.fast_threshold)
-
-    #! Define FastFeature
-    network = FastFeatureNetBig()    
-    network.load_state_dict(torch.load(args.pretrained_model))
-    network = network.cuda()
-    print('Loaded FastFeature from {}'.format(args.pretrained_model))
+    sift =  cv2.SIFT_create(nfeatures=args.nfeatures)
 
     #! Versions of Dataset to use
     eval_params = [{'res': (320, 240), 'top_k': 300, }]
@@ -62,14 +52,13 @@ def main():
                                  worker_init_fn=None,
                                  sampler=None)
 
-        print(f"Number of datapoints: {hp_dataset.__len__()}")
 
         print(colored('Evaluating for {} -- top_k {}'.format(params['res'], params['top_k']),'green'))
+        print(f"Available number of datapoints: {hp_dataset.__len__()}")
 
-        rep, loc, c1, c3, c5, mscore, dur = evaluate_fastfeature(
+        rep, loc, c1, c3, c5, mscore, dur = evaluate_orb(
             data_loader,
-            orb,
-            network,
+            sift,
             output_shape=params['res'],
             top_k=params['top_k'])
 

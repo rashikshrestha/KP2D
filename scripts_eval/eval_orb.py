@@ -31,7 +31,10 @@ def main():
     args = parser.parse_args()
 
     print("Using following args:")
-    print(args)
+
+    for key, value in vars(args).items():
+        print(key, ":", value)
+
     input("Press any key to continue ...")
 
     #! Define ORB detector
