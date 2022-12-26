@@ -32,7 +32,7 @@ def filter_dict(dict, keywords):
     return [key for key in keywords if key in dict]
 
 
-def resize_sample(sample, image_shape, image_interpolation=Image.ANTIALIAS):
+def resize_sample(sample, image_shape, image_interpolation=transforms.InterpolationMode.BILINEAR):
     """
     Resizes a sample, which contains an input image.
 
@@ -42,7 +42,7 @@ def resize_sample(sample, image_shape, image_interpolation=Image.ANTIALIAS):
         Dictionary with sample values (output from a dataset's __getitem__ method)
     shape : tuple (H,W)
         Output shape
-    image_interpolation : int
+    image_interpolation : torchvision.transforms
         Interpolation mode
 
     Returns
