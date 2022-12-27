@@ -257,10 +257,16 @@ def evaluate_fastfeature(data_loader, orb, fastfeature, output_shape=(320, 240),
     conf_threshold = 0.0
     localization_err, repeatability = [], []
     correctness1, correctness3, correctness5, MScore = [], [], [], []
+    duration = []
 
     with torch.no_grad():
         #! For each data point:
         for i, sample in tqdm(enumerate(data_loader), desc="evaluate_fastfeature"):
+            # if i==50:
+            #     break
+            #! -----------------------------------------------------------------------------
+            start = timer()
+
             score_1, desc1 = get_KSD(sample['image'])
             score_2, desc2 = get_KSD(sample['warped_image'])
             # print(desc1)
@@ -274,6 +280,10 @@ def evaluate_fastfeature(data_loader, orb, fastfeature, output_shape=(320, 240),
                     'warped_prob': score_2,
                     'desc': desc1,
                     'warped_desc': desc2}
+
+            end = timer()
+            duration.append(end-start)
+            #! -----------------------------------------------------------------------------
 
             #! Compute repeatabilty and localization error
             _, _, rep, loc_err = compute_repeatability(data, keep_k_points=top_k, distance_thresh=3)
@@ -291,4 +301,5 @@ def evaluate_fastfeature(data_loader, orb, fastfeature, output_shape=(320, 240),
             MScore.append(mscore)
 
     return np.mean(repeatability), np.mean(localization_err), \
-           np.mean(correctness1), np.mean(correctness3), np.mean(correctness5), np.mean(MScore)
+           np.mean(correctness1), np.mean(correctness3), np.mean(correctness5), np.mean(MScore), \
+           np.mean(duration)
