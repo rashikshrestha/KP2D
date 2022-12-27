@@ -38,8 +38,8 @@ def bf_matcher(des1, des2, alpha=0.5, cross_check=False):
     matches = []
 
     # compute the distances between the descriptors
-    dists = cdist(des1, des2, lambda x, y: get_descriptor_distance(x, y))
-    # dists = cdist(des1, des2, lambda x, y: get_custom_descriptor_distance(x, y, alpha=alpha))
+    # dists = cdist(des1, des2, lambda x, y: get_descriptor_distance(x, y))
+    dists = cdist(des1, des2, lambda x, y: get_custom_descriptor_distance(x, y, alpha=alpha))
 
     # loop over the descriptors in des1
     for i in range(des1.shape[0]):
