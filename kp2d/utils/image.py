@@ -38,7 +38,8 @@ def meshgrid(B, H, W, dtype, device, normalized=False):
     else:
         xs = torch.linspace(0, W-1, W, device=device, dtype=dtype)
         ys = torch.linspace(0, H-1, H, device=device, dtype=dtype)
-    ys, xs = torch.meshgrid([ys, xs])
+    # ys, xs = torch.meshgrid([ys, xs])
+    ys, xs = torch.meshgrid(ys, xs, indexing='ij')
     return xs.repeat([B, 1, 1]), ys.repeat([B, 1, 1])
 
 
