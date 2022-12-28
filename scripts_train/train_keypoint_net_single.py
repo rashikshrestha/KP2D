@@ -61,6 +61,10 @@ def main(file):
     print(config)
     print(config.arch)
 
+    # Set random seeds
+    if config.arch.seed is not None:
+        _set_seeds(config.arch.seed)
+
     # Setup model and datasets/dataloaders
     model = KeypointNetwithIOLoss(**config.model.params)
     train_dataset, train_loader = setup_datasets_and_dataloaders(config.datasets)
@@ -149,7 +153,7 @@ def evaluation(config, completed_epoch, model, summary):
 
     # Save checkpoint
     if config.model.save_checkpoint:
-        current_model_path = os.path.join(config.model.checkpoint_path, 'model.ckpt')
+        current_model_path = os.path.join(config.model.checkpoint_path, f"model_{completed_epoch}.ckpt")
         printcolor('\nSaving model (epoch:{}) at {}'.format(completed_epoch, current_model_path), 'green')
         torch.save(
         {
