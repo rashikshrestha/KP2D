@@ -19,7 +19,7 @@ from kp2d.utils.image import to_color_normalized, to_gray_normalized
 from vfm.utils.descriptor_loss import sample_descriptors
 
 
-def evaluate_keypoint_net(data_loader, keypoint_net, output_shape=(320, 240), top_k=300, use_color=True, device='cpu'):
+def evaluate_keypoint_net(data_loader, keypoint_net, output_shape=(320, 240), top_k=300, use_color=True, device='cuda'):
     """Keypoint net evaluation script. 
 
     Parameters
