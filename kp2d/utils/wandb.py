@@ -46,7 +46,7 @@ class WandBLogger:
 
         # Set up environment variables to work with wandb
         os.environ['WANDB_PROJECT'] = project
-        os.environ['WANDB_ENTITY'] = entity
+        # os.environ['WANDB_ENTITY'] = entity
         os.environ['WANDB_MODE'] = mode
 
         pwd = os.getenv('PWD')
