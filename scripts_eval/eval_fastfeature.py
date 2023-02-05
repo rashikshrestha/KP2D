@@ -27,7 +27,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Script for FastFeature testing',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--input_dir", type=str, default="/mnt/SSD0/rashik/datasets/hpatches", help="Path to hpatches dataset")
+    parser.add_argument("--input_dir", type=str, default="/mnt/Enterprise/PUBLIC_DATASETS/HPatches", help="Path to hpatches dataset")
     parser.add_argument("--pretrained_model", default="/home/rashik/workspace/simplicity/KP2D/data/fastfeature/big.pth", type=str, help="pretrained model path")
     parser.add_argument("--nfeatures", type=int, default=500, help="Number of features")
     parser.add_argument("--fast_threshold", type=int, default=20, help="Fast Threshold")
