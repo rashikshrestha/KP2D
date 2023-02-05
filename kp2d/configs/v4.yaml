@@ -16,13 +16,13 @@ model:
     checkpoint_path: '/home/rashik/workspace/simplicity/KP2D/data' 
 
 wandb:
-    dry_run: False
+    dry_run: True
     project: 'kp2d_train_1'
 
 datasets:
     train:
-        path: '/mnt/SSD0/rashik/datasets/coco'
-        batch_size: 32
-        num_workers: 16
+        path: '/mnt/Enterprise/PUBLIC_DATASETS/coco/coco_train'
+        batch_size: 16
+        num_workers: 8
     val:
-        path: '/mnt/SSD0/rashik/datasets/hpatches'
+        path: '/mnt/Enterprise/PUBLIC_DATASETS/HPatches'
